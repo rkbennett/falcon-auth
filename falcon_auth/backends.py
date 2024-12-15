@@ -524,9 +524,10 @@ class MultiAuthBackend(AuthBackend):
                 if user:
                     return user
             except falcon.HTTPUnauthorized as ex:
-                www_authenticate = ex.headers.get('WWW-Authenticate')
-                if www_authenticate:
-                    challenges.append(www_authenticate)
+                pass
+                #www_authenticate = ex.headers.get('WWW-Authenticate')
+                #if www_authenticate:
+                #    challenges.append(www_authenticate)
 
         raise falcon.HTTPUnauthorized(
             description='Authorization Failed',
