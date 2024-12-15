@@ -2,4 +2,4 @@
 
 from .backends import TokenAuthBackend, BasicAuthBackend, \
     JWTAuthBackend, NoneAuthBackend, MultiAuthBackend, HawkAuthBackend
-from .middleware import FalconAuthMiddleware
+from .middleware import FalconAuthMiddleware, FalconAuthMiddleware_async
