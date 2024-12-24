@@ -8,6 +8,7 @@ from datetime import timedelta, datetime
 
 import falcon
 import asyncio
+import logging
 
 try:
     # This is an optional dependency. To use JWTAuthBackend be sure to add
@@ -743,6 +744,7 @@ class JWTAuthBackend_async(AuthBackend_async):
                                  audience=self.audience,
                                  leeway=self.leeway)
         except jwt.InvalidTokenError as ex:
+            logging.warn(ex)
             raise falcon.HTTPUnauthorized(
                 description=str(ex),
                 headers=req.headers)
@@ -952,7 +954,7 @@ class NoneAuthBackend_async(AuthBackend):
         return self.user_loader()
 
 
-class HawkAuthBackend_async(AuthBackend):
+class HawkAuthBackend_async(AuthBackend_async):
     """
     Holder-Of-Key Authentication Scheme defined by `Hawk <https://github.com/hueniverse/hawk>`__
     Clients should authenticate by passing a Hawk-formatted header as the `Authorization`
@@ -1009,7 +1011,7 @@ class HawkAuthBackend_async(AuthBackend):
         return auth_header
 
     async def authenticate(self, req, resp, resource):
-        request_header = self.parse_auth_token_from_request(req.get_header('Authorization'), headers=req.headers)
+        request_header = await self.parse_auth_token_from_request(req.get_header('Authorization'), headers=req.headers)
 
         try:
             # Validate the Authorization header contents and lookup the user's credentials
@@ -1031,7 +1033,7 @@ class HawkAuthBackend_async(AuthBackend):
                 headers=req.headers)
 
         # The authentication was successful, get the actual user object now.
-        user = self.user_loader(receiver.parsed_header['id'])
+        user = await self.user_loader(receiver.parsed_header['id'])
         if not user:
             # Should never really happen unless your user objects and their
             # credentials are out of sync.
