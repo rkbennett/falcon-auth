@@ -5,8 +5,7 @@ from __future__ import division
 
 import falcon
 
-from falcon_auth.backends import AuthBackend
-
+from falcon_auth.backends import AuthBackend, AuthBackend_async
 
 class FalconAuthMiddleware(object):
 
@@ -87,16 +86,16 @@ class FalconAuthMiddleware_async(object):
 
     def __init__(self, backend, exempt_routes=None, exempt_methods=None):
         self.backend = backend
-        if not isinstance(backend, AuthBackend):
+        if not isinstance(backend, AuthBackend) and not isinstance(backend, AuthBackend_async):
             raise ValueError(
                 'Invalid authentication backend {0}. '
-                'Must inherit `falcon.auth.backends.AuthBackend`'.format(backend)
+                'Must inherit `falcon.auth.backends.AuthBackend` or `falcon.auth.backends.AuthBackend_async`'.format(backend)
             )
 
         self.exempt_routes = exempt_routes or []
         self.exempt_methods = exempt_methods or ['OPTIONS']
 
-    def _get_auth_settings(self, req, resource):
+    async def _get_auth_settings(self, req, resource):
         auth_settings = getattr(resource, 'auth', {})
         auth_settings['exempt_routes'] = self.exempt_routes
         if auth_settings.get('auth_disabled'):
@@ -108,19 +107,22 @@ class FalconAuthMiddleware_async(object):
         return auth_settings
 
     async def process_resource(self, req, resp, resource, *args, **kwargs):
-        auth_setting = self._get_auth_settings(req, resource)
+        auth_setting = await self._get_auth_settings(req, resource)
         if (req.uri_template in auth_setting['exempt_routes'] or
             req.method in auth_setting['exempt_methods']):
             return
 
         backend = auth_setting['backend']
-        req.context['user'] = backend.authenticate(req, resp, resource, **kwargs)
+        if backend.__class__.__name__.endswith("_async"):
+            req.context['user'] = await backend.authenticate(req, resp, resource, **kwargs)
+        else:
+            req.context['user'] = backend.authenticate(req, resp, resource, **kwargs)
 
-    async def process_resource_ws(self, req, ws, resource, *args, **kwargs):
-        auth_setting = self._get_auth_settings(req, resource)
+    async def process_resource_ws(self, req, resp, resource, *args, **kwargs):
+        auth_setting = await self._get_auth_settings(req, resource)
         if (req.uri_template in auth_setting['exempt_routes'] or
             req.method in auth_setting['exempt_methods']):
             return
 
         backend = auth_setting['backend']
-        req.context['user'] = backend.authenticate(req, ws, resource, **kwargs)
+        req.context['user'] = await backend.authenticate(req, resp, resource, **kwargs)
