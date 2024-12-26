@@ -125,4 +125,9 @@ class FalconAuthMiddleware_async(object):
             return
 
         backend = auth_setting['backend']
-        req.context['user'] = await backend.authenticate(req, resp, resource, **kwargs)
+        try:
+            req.context['user'] = await backend.authenticate(req, resp, resource, **kwargs)
+        except falcon.HTTPUnauthorized as e:
+            # We need to let the WebSocket resource handle this, or the response code will be 1000
+            pass
+
